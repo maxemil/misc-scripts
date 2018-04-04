@@ -11,6 +11,8 @@ parser.add_argument('fasta', type=str, nargs='+',
 	help='fasta files to be concatenated')
 parser.add_argument('-out', type=str, default='concat.fasta',
         help='if no output file is given, print alignment to concat.fasta')
+parser.add_argument('-s', action='store_true',
+        help='get basic stats for alignments')
 parser.add_argument('-t', '--threshold', type=int, default=1,
         help='minimum number of genes that must be present in an organism')
 args = parser.parse_args()
@@ -35,6 +37,11 @@ def main(args):
             else:
                 df.loc[rec.id] = pd.Series()
                 df[f].loc[rec.id] = str(rec.seq)
+    if args.s:
+        for col in df:
+            print(col)
+            print('# of unique sequences:', df[col].dropna().size)
+            print('# of positions:', len(df[col].dropna()[0]))
 
     df = df.loc[df.count(axis=1) >= args.threshold]
     print("{} ({:.2f}%) missing genes".format(df.size - sum(df.count(0)),
