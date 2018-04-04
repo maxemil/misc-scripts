@@ -8,21 +8,13 @@ params.numprots = 5
 params.cpus = 10
 params.prune_percentage = "0.0"
 
-params.get_hits = false
+params.get_hits = true
 
-if(params.get_hits){
-  Channel.from(params.get_hits).into{get_hits_database; get_hits_references}
-}else{
-  Channel.empty().into{get_hits_database; get_hits_references}
-}
+optional_channel(params.get_hits, Boolean.toString(params.get_hits)).into{get_hits_database; get_hits_references}
+additional_faas = optional_channel(params.faas, params.faas)
+optional_channel(params.references, params.references).into{references; references_add}
 
-if(params.faas != ""){
-  additional_faas = Channel.fromPath(params.faas)
-}else{
-  additional_faas = Channel.empty()
-}
 genomes = Channel.fromPath(params.genomes)
-Channel.fromPath(params.references).into{references; references_add}
 
 process predictGenes {
   input:
@@ -161,7 +153,7 @@ process concatenateAlignments {
   sed -i -E '/^>lcl/! s/_gi\\|.*\$//g' *.aln
   sed -i -E '/^>lcl/! s/_[0-9]*_[3|5]0S_.*\$//g' *.aln
   sed -i -E '/^>lcl/! s/_intID[0-9]*\$//g' *.aln
-  anapy3 $workflow.projectDir/scripts/concatenate.py *.aln -t $params.numprots
+  anapy3 $workflow.projectDir/concatenate.py *.aln -t $params.numprots
   """
 }
 
@@ -205,4 +197,21 @@ process buildTree  {
     """
     iqtree-omp -s ${aln} -m LG+C60 -bb 1000 -nt AUTO -pre ${aln.baseName}
     """
+}
+
+
+
+def optional_channel(condition, argument) {
+  if(argument != ""){
+    handle = file( argument )
+    if (condition && handle.exists()) {
+      return Channel.fromPath(argument)
+    }else if (condition) {
+      return Channel.from(argument)
+    }else{
+      return Channel.empty()
+    }
+  }else{
+    return Channel.empty()
+  }
 }
