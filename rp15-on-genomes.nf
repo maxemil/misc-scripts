@@ -10,11 +10,36 @@ params.prune_percentage = "0.0"
 
 params.get_hits = true
 
-optional_channel(params.get_hits, Boolean.toString(params.get_hits)).into{get_hits_database; get_hits_references}
-additional_faas = optional_channel(params.faas, params.faas)
-optional_channel(params.references, params.references).into{references; references_add}
+optional_channel_boolean(params.get_hits).into{get_hits_database; get_hits_references}
+additional_faas = optional_channel_from_path(params.faas)
+optional_channel_from_path(params.references).into{references; references_add}
+genomes = optional_channel_from_path(params.genomes)
 
-genomes = Channel.fromPath(params.genomes)
+def startup_message() {
+    log.info "=========================================================="
+    log.info "                       RP15 on Genomes"
+    log.info "Author                            : Max Emil Schön"
+    log.info "email                             : max-emil.schon@icm.uu.se"
+    log.info "=========================================================="
+    log.info "                       Parameters"
+    log.info ""
+    log.info "Genomes fasta file location       : $params.genomes"
+    log.info "References COG location           : $params.references"
+    log.info "Additional proteomes to add       : $params.faas"
+    log.info "Output directory                  : $params.outdir"
+    log.info "Phylogenetic method to use        : $params.phylo_method"
+    log.info "Minimum number of proteins        : $params.numprots"
+    log.info "number of CPUs                    : $params.cpus"
+    log.info "heterogeneous sites to be removed : $params.prune_percentage"
+    log.info "=========================================================="
+    log.info "                      Usage examples:"
+    log.info "only perform annnotation of the genomes:"
+    log.info "nextflow run rp15_on_genomes.nf --genomes genomes/* --outdir outdir --get_hits false"
+    log.info "=========================================================="
+}
+
+startup_message()
+
 
 process predictGenes {
   input:
@@ -201,16 +226,17 @@ process buildTree  {
 
 
 
-def optional_channel(condition, argument) {
+def optional_channel_from_path(argument) {
   if(argument != ""){
-    handle = file( argument )
-    if (condition && handle.exists()) {
-      return Channel.fromPath(argument)
-    }else if (condition) {
-      return Channel.from(argument)
-    }else{
-      return Channel.empty()
-    }
+    return Channel.fromPath(argument)
+  }else{
+    return Channel.empty()
+  }
+}
+
+def optional_channel_boolean(argument) {
+  if (argument){
+    return Channel.from(Boolean.toString(argument))
   }else{
     return Channel.empty()
   }
