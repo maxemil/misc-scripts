@@ -102,8 +102,11 @@ process plotDiscordance {
   file all_scores from discordance_files
 
   output:
-  file "discordance_score.pdf" into discordance_plot
+  file "discordance_scores.pdf" into discordance_plot
+  file "discordance_scores.csv" into discordance_table
+
   publishDir "${params.outdir}/discordance", mode: 'copy'
+  tag "all"
 
   script:
   """
@@ -122,15 +125,18 @@ process plotDiscordance {
 
   df = pd.DataFrame.from_dict(score_dict, orient='index')
   df = df.sort_values(by=0)
-  df.index = range(1, df.size + 1)
   df.columns = ['summed score']
+  df['OG'] = df.index
+  df.index = range(1, df['OG'].size + 1)
+  df = df.rename_axis('rank')
+
   ax = df.plot()
-  ax.set_ylabel('Sum of pairwise discordance scores')
-  ax.set_xlabel('OGs ranked by increasing discordance')
+  ax.set(ylabel='Sum of pairwise discordance scores', xlabel='OGs ranked by increasing discordance')
 
-  plt.axvline(x=.7*df.size)
-  plt.axvline(x=.9*df.size, ls='dashed')
+  plt.axvline(x=.7*df['OG'].size)
+  plt.axvline(x=.9*df['OG'].size, ls='dashed')
 
-  plt.savefig("discordance_score.pdf")
+  plt.savefig('discordance_scores.pdf')
+  df.to_csv('discordance_scores.csv', sep='\\t', header=True)
   """
 }
