@@ -132,6 +132,7 @@ process PlotSilixPanorthologs {
   import seaborn as sns
   import matplotlib.pylab as plt
   from itertools import product
+  import numpy as np
 
   ident = ["05", "10", "15", "20", "25", "30", "35", "40"]
   overlap = ["55", "60", "65", "70", "75", "80", "85", "90"]
@@ -143,11 +144,7 @@ process PlotSilixPanorthologs {
       overlap = p.replace('.panorthologs', '').split('_')[2].replace('o', '')
       pan_list = pd.read_csv(p, sep='\\t', header=1)
       pan_num[ident][overlap] = pan_list.shape[0]
-
   pan_num = pan_num.fillna(0)
-  ax = sns.heatmap(pan_num, linewidth=0.5, annot=True, fmt="d", cbar=False)
-  ax.set(xlabel="identity", ylabel="overlap")
-  plt.savefig('panorthologs_numbers.pdf')
 
   ident = ["05", "10", "15", "20", "25", "30", "35", "40"]
   overlap = ["55", "60", "65", "70", "75", "80", "85", "90"]
@@ -164,6 +161,14 @@ process PlotSilixPanorthologs {
           maximum = (m[0], m[1], col_rowsum)
 
   print("silix_i{}_o{}".format(maximum[0],maximum[1]), end="")
+
+  mask_array = np.zeros(pan_num.shape, dtype=bool)
+  mask_array[pan_num.index.get_loc(maximum[1])][pan_num.columns.get_loc(maximum[0])] = True
+  mask_array = mask_array == False
+  ax = sns.heatmap(pan_num, linewidth=0.5, annot=True, fmt="d", cbar=False)
+  ax = sns.heatmap(pan_num, linewidth=0.5, annot=True, fmt="d", cbar=False, annot_kws={'weight': 'bold', 'color': 'red'}, mask=mask_array)
+  ax.set(xlabel="identity", ylabel="overlap")
+  plt.savefig('panorthologs_numbers.pdf')
   """
 }
 silix_optimal = silix_get_optimal.spread(x).filter{it[0].simpleName == it[3]}
