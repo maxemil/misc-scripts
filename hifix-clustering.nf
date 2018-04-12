@@ -131,10 +131,12 @@ process PlotSilixPanorthologs {
   import glob
   import seaborn as sns
   import matplotlib.pylab as plt
+  from itertools import product
 
-
+  ident = ["05", "10", "15", "20", "25", "30", "35", "40"]
+  overlap = ["55", "60", "65", "70", "75", "80", "85", "90"]
   panorthologs = glob.glob("*.panorthologs")
-  pan_num = pd.DataFrame(columns=["05", "10", "15", "20", "25", "30", "35", "40"], index=["55", "60", "65", "70", "75", "80", "85", "90"])
+  pan_num = pd.DataFrame(columns=ident, index=overlap)
 
   for p in panorthologs:
       ident = p.replace('.panorthologs', '').split('_')[1].replace('i', '')
@@ -147,10 +149,21 @@ process PlotSilixPanorthologs {
   ax.set(xlabel="identity", ylabel="overlap")
   plt.savefig('panorthologs_numbers.pdf')
 
+  ident = ["05", "10", "15", "20", "25", "30", "35", "40"]
+  overlap = ["55", "60", "65", "70", "75", "80", "85", "90"]
   max_value = pan_num.max(1).max()
-  for k,v in dict(pan_num.idxmax()).items():
-      if pan_num[k][v] == max_value:
-          print("silix_i{}_o{}".format(k,v), end="")
+  maxima = []
+  for i,o in product(ident, overlap):
+      if pan_num[i][o] == max_value:
+          maxima.append((i,o))
+
+  maximum = (0,0,0)
+  for m in maxima:
+      col_rowsum = sum(pan_num[m[0]]) + sum(pan_num.loc[m[1]])
+      if col_rowsum > maximum[2]:
+          maximum = (m[0], m[1], col_rowsum)
+
+  print("silix_i{}_o{}".format(maximum[0],maximum[1]), end="")
   """
 }
 silix_optimal = silix_get_optimal.spread(x).filter{it[0].simpleName == it[3]}
@@ -174,6 +187,6 @@ process HiFixClustering {
   hifix -t 20 -n 51 allTaxa.fasta $net $fnodes > ${fnodes.simpleName}.hifix.fnodes
   silix-split -n 1 allTaxa.fasta ${fnodes.simpleName}.hifix.fnodes -p $prefix
   silix-fsize ${fnodes.simpleName}.hifix.fnodes > ${fnodes.simpleName}.hifix.fsize
-  rename "allTaxa_silix_i30_o55" "" *.fasta
+  rename "allTaxa_$prefix" "" *.fasta
   """
 }
