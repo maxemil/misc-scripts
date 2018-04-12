@@ -220,7 +220,7 @@ process buildTree  {
     """
   else if (params.phylo_method == "iqtree")
     """
-    iqtree-omp -s ${aln} -m LG+C60 -bb 1000 -nt AUTO -pre ${aln.baseName}
+    iqtree-omp -s ${aln} -m LG+C60 -bb 1000 -nt AUTO -ntmax ${task.cpus} -pre ${aln.baseName}
     """
 }
 
