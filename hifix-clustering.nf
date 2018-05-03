@@ -192,6 +192,6 @@ process HiFixClustering {
   hifix -t 20 -n 51 allTaxa.fasta $net $fnodes > ${fnodes.simpleName}.hifix.fnodes
   silix-split -n 1 allTaxa.fasta ${fnodes.simpleName}.hifix.fnodes -p $prefix
   silix-fsize ${fnodes.simpleName}.hifix.fnodes > ${fnodes.simpleName}.hifix.fsize
-  rename "allTaxa_$prefix" "" *.fasta
+  find . -name '*.fasta' -exec rename "allTaxa_$prefix" "" {} +
   """
 }
