@@ -60,7 +60,30 @@ process predictGenes {
   """
 }
 
-faa_combined = faas.concat(additional_faas).collectFile(name: 'all.faa', newLine: true)
+process cleanAdditionalFaa{
+  input:
+  file faa from additional_faas
+
+  output:
+  file "${faa.simpleName}.clean.faa" into additional_faas_clean
+
+  tag {"${faa.simpleName}"}
+
+  script:
+  """
+  #!/usr/bin/env anapy3
+
+  from Bio import SeqIO
+  with open("${faa.simpleName}.clean.faa", 'w') as outhandle:
+      count = 0
+      for rec in SeqIO.parse("$faa", 'fasta'):
+          rec.id = "${faa.simpleName}_{}".format(count)
+          count = count + 1
+          SeqIO.write(rec, outhandle, 'fasta')
+  """
+}
+
+faa_combined = faas.concat(additional_faas_clean).collectFile(name: 'all.faa', newLine: true)
 
 process databaseFromFaas {
   input:
@@ -175,9 +198,6 @@ process concatenateAlignments {
   script:
   """
   sed -i -E '/^>lcl/ s/_[0-9]*\$//g' *.aln
-  sed -i -E '/^>lcl/! s/_gi\\|.*\$//g' *.aln
-  sed -i -E '/^>lcl/! s/_[0-9]*_[3|5]0S_.*\$//g' *.aln
-  sed -i -E '/^>lcl/! s/_intID[0-9]*\$//g' *.aln
   anapy3 $workflow.projectDir/concatenate.py *.aln -t $params.numprots
   """
 }
@@ -187,13 +207,13 @@ process pruneAlignment {
   file aln from concatenated_alignment
 
   output:
-  file "${aln.baseName}.pruned.aln" into pruned_alignment
+  file "${aln.baseName}.pruned${params.prune_percentage}.aln" into pruned_alignment
 
   publishDir "${params.outdir}", mode: 'copy'
 
   script:
   """
-  /local/two/Software/bitbucket/phylogeny/alignment_pruner.pl --file $aln --chi2_prune f${params.prune_percentage} > ${aln.baseName}.pruned.aln
+  /local/two/Software/bitbucket/phylogeny/alignment_pruner.pl --file $aln --chi2_prune f${params.prune_percentage} > ${aln.baseName}.pruned${params.prune_percentage}.aln
   """
 }
 
@@ -220,8 +240,23 @@ process buildTree  {
     """
   else if (params.phylo_method == "iqtree")
     """
-    iqtree-omp -s ${aln} -m LG+C60 -bb 1000 -nt AUTO -ntmax ${task.cpus} -pre ${aln.baseName}
+    iqtree -s ${aln} -m LG+C60 -bb 1000 -nt AUTO -ntmax ${task.cpus} -pre ${aln.baseName}
     """
+}
+
+process makeNexus {
+  input:
+  file treefile
+
+  output:
+  file "${treefile.baseName}.nex" into nexus_file
+
+  publishDir "${params.outdir}", mode: 'copy'
+
+  script:
+  """
+  anapy3 $workflow.projectDir/create_nexus.py -i $treefile -o ${treefile.baseName}.nex
+  """
 }
 
 
