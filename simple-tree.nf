@@ -40,6 +40,6 @@ process aln2Tree {
 
   script:
   """
-  iqtree-omp -s $aln -pre ${aln.simpleName} -bb 1000 -nt ${task.cpus} -m TESTNEW -mset raxml -keep-ident -seed 12345 -wbtl
+  iqtree -s $aln -pre ${aln.simpleName} -bb 1000 -nt AUTO -ntmax ${task.cpus} -m TESTNEW -mset raxml -keep-ident -seed 12345 -wbtl
   """
 }

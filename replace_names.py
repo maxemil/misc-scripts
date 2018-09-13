@@ -3,6 +3,7 @@
 import argparse
 import shutil
 import random
+import copy
 
 parser = argparse.ArgumentParser()
 
@@ -16,16 +17,16 @@ parser.add_argument("-b", action='store_true',
 args = parser.parse_args()
 
 
-def replace(string, patterns):
+def replace(filecontent, patterns):
     for k,v in patterns.items():
-        string = string.replace(k, v)
-    return string
+        filecontent = filecontent.replace(k, v)
+    return filecontent
 
 
-def safe_replace(string, patterns):
+def safe_replace(filecontent, patterns):
     for p in list(patterns):
         if not any([p in key for key in patterns.keys() if not p is key]):
-            string = string.replace(p, patterns[p])
+            filecontent = filecontent.replace(p, patterns[p])
             patterns.pop(p)
 
     while patterns:
@@ -33,9 +34,9 @@ def safe_replace(string, patterns):
         if any([p in key for key in patterns.keys() if not p is key]):
             pass
         else:
-            string = string.replace(p, patterns[p])
+            filecontent = filecontent.replace(p, patterns[p])
             patterns.pop(p)
-    return string
+    return filecontent
 
 
 def read_patterns(inputfile):
@@ -47,11 +48,12 @@ def read_patterns(inputfile):
 
 
 def need_safe_replace(patterns):
+    p_old = '0'
     for p in sorted(patterns.keys()):
-        p_old = p
         if p_old in p:
             print("WARNING: patterns are not unique or substrings of each other! Will attempt a safe replace.")
             return True
+        p_old = p
     return False
 
 
@@ -66,13 +68,13 @@ def main(inputfile, replacementfiles, backup):
     safe = need_safe_replace(patterns)
 
     for refile in replacementfiles:
-        string = open(refile).read()
+        filecontent = open(refile).read()
         if safe:
-            string = safe_replace(string, patterns)
+            filecontent = safe_replace(filecontent, copy.deepcopy(patterns))
         else:
-            string = replace(string, patterns)
+            filecontent = replace(filecontent, patterns)
         with open(refile, 'w') as out:
-            out.write(string)
+            out.write(filecontent)
 
 
 if __name__ == "__main__":

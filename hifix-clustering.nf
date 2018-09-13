@@ -47,8 +47,12 @@ process DiamondBlastAllvsAll {
                --evalue 0.0001 \
   """
 }
-overlap = Channel.from("55 60 65 70 75 80 85 90".tokenize())
-ident = Channel.from("05 10 15 20 25 30 35 40".tokenize())
+overlap_array = "55 60 65 70 75 80 85 90".tokenize()
+// overlap_array = "55 60 65 70 75".tokenize()
+overlap = Channel.from(overlap_array)
+ident_array = "05 10 15 20 25 30 35 40".tokenize()
+// ident_array = "20 25 30 35".tokenize()
+ident = Channel.from(ident_array)
 
 silix_params = overlap.spread(ident)
 
@@ -85,6 +89,7 @@ process CountSilixPanorthologs {
 
   publishDir "$params.outdir/silix", mode: 'copy'
   tag "${fnodes.simpleName}"
+  cpus params.cpu
 
   script:
   """
@@ -92,22 +97,47 @@ process CountSilixPanorthologs {
 
   import pandas as pd
   from math import isclose
+  import numpy as np
+  from multiprocessing import Pool
+  from functools import partial
 
-  prefix = "${fnodes.simpleName}"
-  try:
+  def count_panorthologs(row, fnodes):
+      spec = len(set(fnodes[1][fnodes[0] == row['clst']]))
+      members = (fnodes[0] == row['clst']).sum()
+      if isclose(members, spec, abs_tol=5) and spec > (0.9 * $num_taxa):
+          return True
+      else:
+          return False
+
+  def count_panorthologs_df(df, fnodes):
+      counts = df.apply(partial(count_panorthologs, fnodes=fnodes), axis=1)
+      print(counts)
+      return counts
+
+  def parallelize(cluster, fnodes, func, processors):
+      with Pool(processors) as pool:
+          data_split = np.array_split(cluster, processors)
+          result_split = pool.map(partial(func, fnodes=fnodes), data_split)
+          return pd.concat(result_split)
+
+  def create_panorthologs_files(prefix):
       print("read {}.fnodes".format(prefix))
       fnodes = pd.read_csv("$fnodes", header=None, sep='\\t|&', engine='python')
       print("read {}.cluster".format(prefix))
       cluster = pd.read_csv("$cluster", header=None, names=["clst"])
-      print("create members column for {}".format(prefix))
-      cluster['members'] = cluster.apply(lambda row: (fnodes[0] == row['clst']).sum(), axis=1)
-      print("create spec column for {}".format(prefix))
-      cluster['spec'] = cluster.apply(lambda row: len(set(fnodes[1][fnodes[0] == row['clst']])), axis=1)
-      print("create panorthologs file for {}".format(prefix))
-      panorthologs = cluster[cluster.apply(lambda row: isclose(row['members'], row['spec'], abs_tol=5) and row['spec'] > (0.9 * $num_taxa), axis=1)]
+      print("get panorthologs counts for {}".format(prefix))
+      panorthologs_count = parallelize(cluster, fnodes, count_panorthologs_df, ${task.cpus})
+      print("extract panortholog clusters for {}".format(prefix))
+      panorthologs = cluster[panorthologs_count]
+      print("print panorthologs file for {}".format(prefix))
       panorthologs.to_csv("{}.panorthologs".format(prefix), sep='\\t', index=False)
-  except:
-      print("error when processing {}".format(prefix))
+
+  if __name__ == "__main__":
+      prefix = "${fnodes.simpleName}"
+      try:
+          create_panorthologs_files(prefix)
+      except:
+          print("error when processing {}".format(prefix))
   """
 }
 
@@ -134,10 +164,10 @@ process PlotSilixPanorthologs {
   from itertools import product
   import numpy as np
 
-  ident = ["05", "10", "15", "20", "25", "30", "35", "40"]
-  overlap = ["55", "60", "65", "70", "75", "80", "85", "90"]
+  ident_list = "$ident_array".replace('[', '').replace(']', '').replace(' ', '').split(',')
+  overlap_list = "$overlap_array".replace('[', '').replace(']', '').replace(' ', '').split(',')
   panorthologs = glob.glob("*.panorthologs")
-  pan_num = pd.DataFrame(columns=ident, index=overlap)
+  pan_num = pd.DataFrame(columns=ident_list, index=overlap_list)
 
   for p in panorthologs:
       ident = p.replace('.panorthologs', '').split('_')[1].replace('i', '')
@@ -146,11 +176,9 @@ process PlotSilixPanorthologs {
       pan_num[ident][overlap] = pan_list.shape[0]
   pan_num = pan_num.fillna(0)
 
-  ident = ["05", "10", "15", "20", "25", "30", "35", "40"]
-  overlap = ["55", "60", "65", "70", "75", "80", "85", "90"]
   max_value = pan_num.max(1).max()
   maxima = []
-  for i,o in product(ident, overlap):
+  for i,o in product(ident_list, overlap_list):
       if pan_num[i][o] == max_value:
           maxima.append((i,o))
 
@@ -177,6 +205,7 @@ silix_optimal = silix_get_optimal.spread(x).filter{it[0].simpleName == it[3]}
 process HiFixClustering {
   input:
   set file(fnodes), file("allTaxa.fasta"), file(net), val(prefix) from silix_optimal
+  val num_taxa from num_taxa
 
   output:
   file "${fnodes.simpleName}.hifix.fnodes" into hifix_fnodes
@@ -186,10 +215,11 @@ process HiFixClustering {
   container "HiFiX.img"
   publishDir "$params.outdir/hifix", mode: 'copy'
   tag "$prefix"
+  cpus params.cpu
 
   script:
   """
-  hifix -t 20 -n 51 allTaxa.fasta $net $fnodes > ${fnodes.simpleName}.hifix.fnodes
+  hifix -t ${task.cpus} -n $num_taxa --force allTaxa.fasta $net $fnodes > ${fnodes.simpleName}.hifix.fnodes
   silix-split -n 1 allTaxa.fasta ${fnodes.simpleName}.hifix.fnodes -p $prefix
   silix-fsize ${fnodes.simpleName}.hifix.fnodes > ${fnodes.simpleName}.hifix.fsize
   find . -name '*.fasta' -exec rename "allTaxa_$prefix" "" {} +

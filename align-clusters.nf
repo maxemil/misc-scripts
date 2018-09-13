@@ -32,7 +32,7 @@ process sortClustersBySize {
   """
 }
 
-process alignTrimRefQueries {
+process alignCluster {
   input:
   file faa from normal_faa
 
