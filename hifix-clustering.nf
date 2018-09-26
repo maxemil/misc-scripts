@@ -104,7 +104,8 @@ process CountSilixPanorthologs {
   def count_panorthologs(row, fnodes):
       spec = len(set(fnodes[1][fnodes[0] == row['clst']]))
       members = (fnodes[0] == row['clst']).sum()
-      if isclose(members, spec, abs_tol=5) and spec > (0.9 * $num_taxa):
+      if isclose(members, spec, abs_tol=5) and spec > (0.9 * $num_taxa): # count universal single copy gene families
+      # if spec > (0.9 * $num_taxa): # count universal gene families
           return True
       else:
           return False
