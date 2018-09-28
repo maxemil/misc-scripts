@@ -2,7 +2,7 @@ params.faa = ""
 params.outdir = "results"
 params.cpu = 4
 
-Channel.from(file(params.faa)).into{count_faa; merge_faa}
+Channel.fromPath(params.faa).into{count_faa; merge_faa}
 merge_faa.collectFile(name: 'allTaxa.faa', storeDir: params.outdir).into{subject_faa; query_faa; silix_faa}
 num_taxa = count_faa.count()
 
@@ -112,7 +112,6 @@ process CountSilixPanorthologs {
 
   def count_panorthologs_df(df, fnodes):
       counts = df.apply(partial(count_panorthologs, fnodes=fnodes), axis=1)
-      print(counts)
       return counts
 
   def parallelize(cluster, fnodes, func, processors):
