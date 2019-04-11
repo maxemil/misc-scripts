@@ -92,53 +92,7 @@ process CountSilixPanorthologs {
   cpus params.cpu
 
   script:
-  """
-  #!/usr/bin/env anapy3
-
-  import pandas as pd
-  from math import isclose
-  import numpy as np
-  from multiprocessing import Pool
-  from functools import partial
-
-  def count_panorthologs(row, fnodes):
-      spec = len(set(fnodes[1][fnodes[0] == row['clst']]))
-      members = (fnodes[0] == row['clst']).sum()
-      if isclose(members, spec, abs_tol=5) and spec > (0.9 * $num_taxa): # count universal single copy gene families
-      # if spec > (0.9 * $num_taxa): # count universal gene families
-          return True
-      else:
-          return False
-
-  def count_panorthologs_df(df, fnodes):
-      counts = df.apply(partial(count_panorthologs, fnodes=fnodes), axis=1)
-      return counts
-
-  def parallelize(cluster, fnodes, func, processors):
-      with Pool(processors) as pool:
-          data_split = np.array_split(cluster, processors)
-          result_split = pool.map(partial(func, fnodes=fnodes), data_split)
-          return pd.concat(result_split)
-
-  def create_panorthologs_files(prefix):
-      print("read {}.fnodes".format(prefix))
-      fnodes = pd.read_csv("$fnodes", header=None, sep='\\t|&', engine='python')
-      print("read {}.cluster".format(prefix))
-      cluster = pd.read_csv("$cluster", header=None, names=["clst"])
-      print("get panorthologs counts for {}".format(prefix))
-      panorthologs_count = parallelize(cluster, fnodes, count_panorthologs_df, ${task.cpus})
-      print("extract panortholog clusters for {}".format(prefix))
-      panorthologs = cluster[panorthologs_count]
-      print("print panorthologs file for {}".format(prefix))
-      panorthologs.to_csv("{}.panorthologs".format(prefix), sep='\\t', index=False)
-
-  if __name__ == "__main__":
-      prefix = "${fnodes.simpleName}"
-      try:
-          create_panorthologs_files(prefix)
-      except:
-          print("error when processing {}".format(prefix))
-  """
+  template 'hifix-clustering/count_silix_orthologs.py'
 }
 
 
@@ -154,50 +108,7 @@ process PlotSilixPanorthologs {
   tag "all"
 
   script:
-  """
-  #!/usr/bin/env anapy3
-
-  import pandas as pd
-  import glob
-  import seaborn as sns
-  import matplotlib.pylab as plt
-  from itertools import product
-  import numpy as np
-
-  ident_list = "$ident_array".replace('[', '').replace(']', '').replace(' ', '').split(',')
-  overlap_list = "$overlap_array".replace('[', '').replace(']', '').replace(' ', '').split(',')
-  panorthologs = glob.glob("*.panorthologs")
-  pan_num = pd.DataFrame(columns=ident_list, index=overlap_list)
-
-  for p in panorthologs:
-      ident = p.replace('.panorthologs', '').split('_')[1].replace('i', '')
-      overlap = p.replace('.panorthologs', '').split('_')[2].replace('o', '')
-      pan_list = pd.read_csv(p, sep='\\t', header=1)
-      pan_num[ident][overlap] = pan_list.shape[0]
-  pan_num = pan_num.fillna(0)
-
-  max_value = pan_num.max(1).max()
-  maxima = []
-  for i,o in product(ident_list, overlap_list):
-      if pan_num[i][o] == max_value:
-          maxima.append((i,o))
-
-  maximum = (0,0,0)
-  for m in maxima:
-      col_rowsum = sum(pan_num[m[0]]) + sum(pan_num.loc[m[1]])
-      if col_rowsum > maximum[2]:
-          maximum = (m[0], m[1], col_rowsum)
-
-  print("silix_i{}_o{}".format(maximum[0],maximum[1]), end="")
-
-  mask_array = np.zeros(pan_num.shape, dtype=bool)
-  mask_array[pan_num.index.get_loc(maximum[1])][pan_num.columns.get_loc(maximum[0])] = True
-  mask_array = mask_array == False
-  ax = sns.heatmap(pan_num, linewidth=0.5, annot=True, fmt="d", cbar=False)
-  ax = sns.heatmap(pan_num, linewidth=0.5, annot=True, fmt="d", cbar=False, annot_kws={'weight': 'bold', 'color': 'red'}, mask=mask_array)
-  ax.set(xlabel="identity", ylabel="overlap")
-  plt.savefig('panorthologs_numbers.pdf')
-  """
+  template 'hifix-clustering/plot_silix.py'
 }
 silix_optimal = silix_get_optimal.spread(x).filter{it[0].simpleName == it[3]}
 
@@ -219,7 +130,7 @@ process HiFixClustering {
 
   script:
   """
-  hifix -t ${task.cpus} -n $num_taxa --force allTaxa.fasta $net $fnodes > ${fnodes.simpleName}.hifix.fnodes
+  hifix -t ${task.cpus} -n 2 --force allTaxa.fasta $net $fnodes > ${fnodes.simpleName}.hifix.fnodes
   silix-split -n 1 allTaxa.fasta ${fnodes.simpleName}.hifix.fnodes -p $prefix
   silix-fsize ${fnodes.simpleName}.hifix.fnodes > ${fnodes.simpleName}.hifix.fsize
   find . -name '*.fasta' -exec rename "allTaxa_$prefix" "" {} +
