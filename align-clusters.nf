@@ -37,14 +37,17 @@ process alignCluster {
   file faa from normal_faa
 
   output:
-  file "${faa.baseName}.trim.aln" into trimmed_alignments
+  file "${faa.baseName}.aln" into trimmed_alignments
 
   publishDir "${params.output_alignments}", mode: 'copy'
   tag {"${faa.simpleName}"}
+  cpus 1
 
   script:
   """
-  mafft-linsi --anysymbol --thread ${task.cpus} $faa > "${faa.baseName}.aln"
-  trimal -in "${faa.baseName}.aln" -out "${faa.baseName}.trim.aln" -gappyout -fasta
+  sed -i 's/*//g' $faa
+  prequal $faa
+  mafft-einsi --anysymbol --thread ${task.cpus} ${faa}.filtered > "${faa.baseName}.aln"
+  #trimal -in "${faa.baseName}.aln" -out "${faa.baseName}.trim.aln" -gappyout -fasta
   """
 }
