@@ -84,10 +84,13 @@ def cut_sequences(rRNAs):
 
 def write_sequences(outfile, pool_output):
     t0 = time.time()
-    with open(outfile, 'w') as f:
-        for local_list in pool_output:
-            for rec in local_list:
-                SeqIO.write(rec, f, 'fasta')
+    if any([l for l in pool_output]):
+        with open(outfile, 'w') as f:
+            for local_list in pool_output:
+                for rec in local_list:
+                    SeqIO.write(rec, f, 'fasta')
+    else:
+        print("No output file written, no sequences extracted")
     t1 = time.time()
     print("writing rRNA sequences to file took %s seconds" % (t1-t0))
 
