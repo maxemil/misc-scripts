@@ -28,17 +28,22 @@ parser.add_argument("-l", "--logfile", required=True, type=str, help="barrnap lo
 parser.add_argument("-r", "--reference", required=True, type=str, help="original sequences in fasta format")
 parser.add_argument("-o", "--output", required=False, type=str, default='rRNA.fasta',
                     help="output file name, fasta format, default=rRNA.fasta")
-parser.add_argument("-f", "--filter", required=False, default='rRNA', choices=['16S', '5S', '23S', 'rRNA'],
-                    help="filter term, default=rRNA (no filtering)")
+parser.add_argument("-f", "--filter", required=False, default='rRNA',
+                    choices=['16S', '5S', '23S', 'rRNA', '18S', '28S', 'SSU', 'LSU'],
+                    help="filter term, default=rRNA (no filtering)", nargs='+')
 parser.add_argument("-t", "--threads", required=False, type=int, default=1, help="number of threads, default=1")
 
 args = parser.parse_args()
 
 REF_DICT = {}
 
+if 'SSU' in args.filter:
+    args.filter += ['18S', '16S']
+elif 'LSU' in args.filter:
+    args.filter += ['28S', '23S']
 
 def get_putative_rrna(contig, start, end, tag, local_list):
-    if args.filter in tag:
+    if any([f  in  tag for f in args.filter]):
         local_list.append(SeqIO.SeqRecord(REF_DICT[contig].seq[start:end], contig + ":%s-%s" % (start, end),
                                           description=tag))
 
@@ -92,4 +97,3 @@ if __name__ == "__main__":
     rRNAs = load_positions(args.logfile)
     sequences = cut_sequences(rRNAs)
     write_sequences(args.output, sequences)
-
