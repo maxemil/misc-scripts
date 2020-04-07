@@ -13,6 +13,8 @@ parser.add_argument("-f", "--files", required=True, nargs='+',
                     help="files that are going to be searched and replaced")
 parser.add_argument("-b", action='store_true',
                     help="switch for creating backup file with extension .bak")
+parser.add_argument("-r", "--reverse", action='store_true',
+                    help="patterns are reversed (new\told) instead of (old\tnew)")
 
 args = parser.parse_args()
 
@@ -39,32 +41,39 @@ def safe_replace(filecontent, patterns):
     return filecontent
 
 
-def read_patterns(inputfile):
+def read_patterns(inputfile, reverse):
     patterns = {}
     for line in open(inputfile):
         line = line.strip().split('\t')
-        patterns[line[0]] = line[1]
+        if reverse:
+            patterns[line[1]] = line[0]
+        else:
+            patterns[line[0]] = line[1]
     return patterns
 
 
 def need_safe_replace(patterns):
-    p_old = '0'
+    p_old = ""
     for p in sorted(patterns.keys()):
+        if not p_old:
+            p_old = p
+            continue
         if p_old in p:
             print("WARNING: patterns are not unique or substrings of each other! Will attempt a safe replace.")
+            print(p_old, p)
             return True
         p_old = p
     return False
 
 
-def main(inputfile, replacementfiles, backup):
+def main(inputfile, replacementfiles, backup, reverse):
     if backup:
         for refile in replacementfiles:
             shutil.copyfile(refile, "%s.bak" % refile)
     else:
         pass
 
-    patterns = read_patterns(inputfile)
+    patterns = read_patterns(inputfile, reverse)
     safe = need_safe_replace(patterns)
 
     for refile in replacementfiles:
@@ -78,4 +87,4 @@ def main(inputfile, replacementfiles, backup):
 
 
 if __name__ == "__main__":
-    main(args.input, args.files, args.b)
+    main(args.input, args.files, args.b, args.reverse)
