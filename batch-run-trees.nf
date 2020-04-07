@@ -13,6 +13,7 @@ process cluster2Tree {
 
   publishDir "${params.output_trees}", mode: 'copy'
   tag {"${aln.simpleName}"}
+  cpus 3
 
   script:
   if (params.phylo_method == "iqtree")

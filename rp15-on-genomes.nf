@@ -71,7 +71,7 @@ process cleanAdditionalFaa{
 
   script:
   """
-  #!/usr/bin/env anapy3
+  #!/usr/bin/env python3
 
   from Bio import SeqIO
   with open("${faa.simpleName}.clean.faa", 'w') as outhandle:
