@@ -19,9 +19,8 @@ process runEMapper {
   tag {"${fasta.baseName}"}
   stageInMode 'copy'
 
-
   script:
   """
-  python /local/two/Software/eggnog-mapper/emapper.py -d ${params.server_adress} -o ${fasta.simpleName} --output_dir . -i $fasta
+  python2 /local/two/Software/eggnog-mapper/emapper.py -d ${params.server_adress} -o ${fasta.simpleName} --output_dir . -i $fasta
   """
 }
