@@ -33,6 +33,9 @@ def main(args):
     for f in args.fasta:
         try:
             aln = AlignIO.read(f, 'fasta')
+            if aln.get_alignment_length() == 0:
+                print('alignment file %s contains no sequences' % f)
+                continue
             alignments[f] = aln
             lengths[f] = '-' * aln.get_alignment_length()
         except:
@@ -46,10 +49,12 @@ def main(args):
                 df[f].loc[rec.id.split(args.seperator)[0]] = str(rec.seq)
     if args.s:
         for col in df:
-            print(col)
-            print('# of unique sequences:', df[col].dropna().size)
-            print('# of positions:', len(df[col].dropna()[0]))
-
+            try:
+                print(col)
+                print('# of unique sequences:', df[col].dropna().size)
+                print('# of positions:', len(df[col].dropna()[0]))
+            except:
+                print('no sequences found in %s' % col)
     df = df.loc[df.count(axis=1) >= args.threshold]
     print("{} ({:.2f}%) missing genes".format(df.size - sum(df.count(0)),
                         ((df.size - sum(df.count(0))) / df.size) * 100),
