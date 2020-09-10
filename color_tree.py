@@ -81,9 +81,9 @@ parser.add_argument("-c", "--colors", required=True,
                     help="input file with color codes for taxa, as a tab separated list")
 parser.add_argument("-o", "--output", required=False, default="tree.nex",
                     help="output file in nexus format, prepared for FigTree")
-parser.add_argument("--taxonomy", action='store_true', required=False,
+parser.add_argument("-t", "--taxonomy", action='store_true',
                     help="parse EggNOG style seq names to taxonomy strings")
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    main(args.input, args.output, args.colors)
+    main(args.input, args.output, args.colors, args.taxonomy)
