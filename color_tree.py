@@ -26,10 +26,11 @@ def get_taxonomy(tree, tax2color):
             lin = ncbi.get_lineage(int(l.name.split('.')[0]))
             tax = []
             for t in lin: 
-                name = ncbi.get_taxid_translator([t])[t].replace(' ', '_')
-                if not name in ['root', 'cellular_organisms']:
+                name = ncbi.get_taxid_translator([t])[t]
+                name = re.sub(r"[\ |/|\.|'|&]", '_', name)
+                if ncbi.get_rank([t])[t] in ['family', 'class', 'phylum', 'kingdom', 'superkingdom']:
                     tax.append(name)
-            tax = ";".join(tax)
+            tax = "_".join(tax + [l.name])
             col = get_color_taxon(l.name, tax2color)
             l.name = tax
             tax2color[l.name] = col
