@@ -1,12 +1,13 @@
 import argparse
 import ete3
 import re
+import matplotlib.colors as cs
 
 def parse_colors(tree, colors):
     tax2color = {}
     for line in open(colors):
         line = line.strip().split()
-        tax2color[line[0]] = line[1]
+        tax2color[line[0]] = cs.rgb2hex(line[1])
     return tax2color
     
 def get_color_taxon(name, tax2color):
@@ -17,7 +18,7 @@ def get_color_taxon(name, tax2color):
             if t in name:
                 return tax2color[t]
     else:
-        return "#000000"
+        return cs.rgb2hex('black')
 
 def get_taxonomy(tree, tax2color):
     ncbi = ete3.ncbi_taxonomy.NCBITaxa()
@@ -27,8 +28,8 @@ def get_taxonomy(tree, tax2color):
             tax = []
             for t in lin: 
                 name = ncbi.get_taxid_translator([t])[t]
-                name = re.sub(r"[\ |/|\.|'|&]", '_', name)
-                if ncbi.get_rank([t])[t] in ['family', 'class', 'phylum', 'kingdom', 'superkingdom']:
+                name = re.sub(r"[\ |/|\.|'|&|(|)]|:", '_', name)
+                if ncbi.get_rank([t])[t] in ['species', 'family', 'class', 'phylum', 'kingdom', 'superkingdom']:
                     tax.append(name)
             tax = "_".join(tax + [l.name])
             col = get_color_taxon(l.name, tax2color)
