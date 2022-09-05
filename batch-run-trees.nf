@@ -40,9 +40,9 @@ process cluster2Tree {
       return 0
     }
 
-    mpirun -np 4 pb_mpi -d $aln -cat -lg "${aln.simpleName}".chain1 &
+    mpirun -np 4 pb_mpi -d $aln -cat -gtr -dc "${aln.simpleName}".chain1 &
     pid1=\$!
-    mpirun -np 4 pb_mpi -d $aln -cat -lg "${aln.simpleName}".chain2 &
+    mpirun -np 4 pb_mpi -d $aln -cat -gtr -dc "${aln.simpleName}".chain2 &
     pid2=\$!
 
     sleep 60s
