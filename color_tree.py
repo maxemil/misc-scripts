@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import argparse
 import ete3
 import re
