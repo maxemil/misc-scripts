@@ -27,7 +27,7 @@ def parse_short_names(short_names):
     if short_names:
         for line in open(short_names):
             line = line.strip().split('\t')
-            id2name[line[0]] = line[1]
+            id2name[line[0]] = '"{}"'.format(line[1])
     return id2name
 
 def get_short_name(leaf, id2name):
