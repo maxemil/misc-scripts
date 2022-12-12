@@ -26,7 +26,7 @@ def parse_short_names(short_names):
     id2name = {}
     if short_names:
         for line in open(short_names):
-            line = line.strip('\t').split()
+            line = line.strip().split('\t')
             id2name[line[0]] = line[1]
     return id2name
 
