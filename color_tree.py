@@ -26,7 +26,7 @@ def parse_short_names(short_names):
     id2name = {}
     if short_names:
         for line in open(short_names):
-            line = line.strip().split():
+            line = line.strip('\t').split()
             id2name[line[0]] = line[1]
     return id2name
 
@@ -59,6 +59,7 @@ def get_taxa_block_nexus(tree, tax2color, id2name):
     taxa_block += "\ttaxlabels\n"
     for t in tree.get_leaves():
         taxa_block += "\t{}[&!color={}]\n".format(get_short_name(t, id2name), get_color_taxon(t.name, tax2color))
+        t.name = get_short_name(t, id2name)
     taxa_block += ";\n"
     taxa_block += "end;\n"
     return taxa_block
