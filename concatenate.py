@@ -43,10 +43,10 @@ def main(args):
 
         for rec in SeqIO.parse(f, 'fasta'):
             if rec.id.split(args.seperator)[0] in df.index:
-                df[f].loc[rec.id.split(args.seperator)[0]] = str(rec.seq)
+                df.loc[rec.id.split(args.seperator)[0], f] = str(rec.seq)
             else:
                 df.loc[rec.id.split(args.seperator)[0]] = pd.Series(dtype=str)
-                df[f].loc[rec.id.split(args.seperator)[0]] = str(rec.seq)
+                df.loc[rec.id.split(args.seperator)[0], f] = str(rec.seq)
     if args.s:
         for col in df:
             try:
