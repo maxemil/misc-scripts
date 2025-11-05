@@ -2,7 +2,6 @@
 
 from Bio import AlignIO, SeqIO, Seq, SeqRecord
 from collections import OrderedDict
-import Bio
 import argparse
 import pandas as pd
 import sys
